@@ -1,0 +1,45 @@
+from pyspark.sql import SparkSession
+from pyspark.sql.types import *
+import pyspark.sql.functions as F
+from pyspark.sql.functions import col, expr, when
+import datetime
+from datetime import timedelta
+import os
+import hashlib
+import csv
+import gzip
+import pandas as pd
+import time
+from dateutil import parser
+import numpy as np
+
+for hash_file in hash_list:
+  save_path=PARAMETERS["DST_PATH"]+hash_file #target ~[0-9]
+  print("old_path:"+save_path)
+  #get datetime format
+  save_old_path="/"+re.findall(r"/(.+?)_2",save_path)[0]+"_"
+  #print(save_old_path)
+  save_old_date="2"+re.findall(r"_2(.+?)\.",save_path)[0]
+  #print(save_old_date)
+  old_day_hour=save_old_date[0:4]+"-"+save_old_date[4:6]+"-"+save_old_date[6:8]+" "+save_old_date[8:10]+":00:00"
+  #print(old_day_hour)
+  format="%Y-%m-%d %H:%M:%S"
+  date_time_obj=datetime.strptime(old_day_hour, format)
+  #add 14 hours
+  date_time_obj_plus_14=date_time_obj + timedelta(hours=14)
+  new_time_stamp=date_time_obj_plus_14.strftime('%Y%m%d%H')+".csv.gz"
+  new_save_path=save_old_path+new_time_stamp
+  print("new_path:"+new_save_path)
+
+  file_path=PARAMETERS["SOURCE_PATH"]+hash_file
+  #print(file_path)
+  fout = gzip.open(save_path, 'wt',encoding='utf-8-sig')
+  csvwriter = csv.writer(fout, delimiter=',', quotechar='"',quoting=csv.QUOTE_MINIMAL)
+  with gzip.open(file_path, 'rt') as csvfile:
+    csvreader = csv.reader(csvfile, delimiter=',', quotechar='"')
+    for lineno, row in enumerate(csvreader):
+      fields=len(row)
+      if lineno >= PARAMETERS["header_loc"] and fields>=PARAMETERS["column_loc"]: 
+        row[PARAMETERS["column_loc"]] = hash(row[PARAMETERS["column_loc"]])
+      csvwriter.writerow(row)
+  fout.close()
