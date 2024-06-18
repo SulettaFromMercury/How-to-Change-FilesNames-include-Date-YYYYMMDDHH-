@@ -1,0 +1,19 @@
+#!/bin/ksh
+
+for file in *.gz; do
+  # old files format ABCD_SH_YYYYMMDDHH.csv.gz
+  old_date=$(echo $file | grep -o '[0-9]\{10\}')
+  old_year=${old_date:0:4}
+  old_month=${old_date:4:2}
+  old_day=${old_date:6:2}
+  old_hour=${old_date:8:2}:00:00
+  # trans string format 
+  old_timestamp="${old_year}-${old_month}-${old_day} ${old_hour}"
+  # new format YYYYMMDDHH + 14H
+  new_date=$(date -d "${old_timestamp} 14 hours" +"%Y%m%d%H")
+  # build new name
+  new_name=$(echo $file | sed "s/${old_date}/${new_date}/")
+  echo $new_name
+  # mv file 
+  mv $file /path/$new_name
+done
